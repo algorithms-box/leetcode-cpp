@@ -8,7 +8,7 @@ cpp_run:
 	g++ -o test test.cpp
 	./test
 
-cpp_run:
+cpp2_run:
 	g++ -o test2 test_2.cpp
 	./test2
 
