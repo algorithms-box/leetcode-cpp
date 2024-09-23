@@ -74,7 +74,7 @@ void performanceTest() {
         th.join();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Performance Test: " << elapsed.count() << " seconds"
+    std::cout << "\nPerformance Test: " << elapsed.count() << " seconds"
               << std::endl;
 }
 
