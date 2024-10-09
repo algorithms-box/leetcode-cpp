@@ -1,16 +1,13 @@
-py_run:
-	python3 *.py
+CXX=g++
+CXXFLAGS=-std=c++11 -Wall -Wextra -O2 -pthread
 
-go_run:
-	go run *.go
+all: main
 
-cpp_run:
-	g++ -o test test.cpp
-	./test
+main: main.o
+	$(CXX) $(CXXFLAGS) -o main main.o
 
-cpp11_run:
-	g++ -std=c++11 -o two_sum two_sum.cpp
-	./two_sum
+main.o: main.cpp
+	$(CXX) $(CXXFLAGS) -c main.cpp
 
 clean:
-	rm ./test
+	rm -f *.o main
