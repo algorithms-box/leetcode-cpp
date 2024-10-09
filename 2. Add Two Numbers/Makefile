@@ -1,16 +1,15 @@
-py_run:
-	python3 *.py
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -Wextra -O3
+TARGET = main
+SRCS = main.cpp
 
-go_run:
-	go run *.go
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
-cpp_run:
-	g++ -o test test.cpp
-	./test
-
-cpp11_run:
-	g++ -std=c++11 -o add_two_numbers add_two_numbers.cpp
-	./add_two_numbers
+.PHONY: clean run
 
 clean:
-	rm ./test
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
