@@ -1,13 +1,15 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -pthread
+CXXFLAGS = -std=c++11 -Wall -Wextra -O3 -pthread
+TARGET = print_in_order
+SRCS = main.cpp
 
-all: main
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
-main: main.o
-	$(CXX) $(CXXFLAGS) -o main main.o
-
-main.o: main.cpp
-	$(CXX) $(CXXFLAGS) -c main.cpp
+.PHONY: clean run
 
 clean:
-	rm -f main main.o
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)

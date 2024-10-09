@@ -1,73 +1,103 @@
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 class Foo {
   private:
     std::mutex mtx;
     std::condition_variable cv;
-    int step = 0;
+    int count;
 
   public:
-    Foo() {}
+    Foo() : count(0) {}
 
-    void first() {
+    void first(const std::function<void()> &printFirst) {
         std::unique_lock<std::mutex> lock(mtx);
-        std::cout << "first";
-        step = 1;
+        // printFirst() outputs "first". Do not change or remove this line.
+        printFirst();
+        count++;
         cv.notify_all();
     }
 
-    void second() {
+    void second(const std::function<void()> &printSecond) {
         std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this] { return step == 1; });
-        std::cout << "second";
-        step = 2;
+        cv.wait(lock, [this] { return count >= 1; });
+        // printSecond() outputs "second". Do not change or remove this line.
+        printSecond();
+        count++;
         cv.notify_all();
     }
 
-    void third() {
+    void third(const std::function<void()> &printThird) {
         std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this] { return step == 2; });
-        std::cout << "third";
+        cv.wait(lock, [this] { return count >= 2; });
+        // printThird() outputs "third". Do not change or remove this line.
+        printThird();
     }
 };
 
-// Unit Testing
-void testFoo() {
+void runUnitTest() {
     Foo foo;
-    std::thread t1(&Foo::first, &foo);
-    std::thread t2(&Foo::second, &foo);
-    std::thread t3(&Foo::third, &foo);
+    std::vector<std::string> output;
+
+    auto printFirst = [&output]() { output.push_back("first"); };
+    auto printSecond = [&output]() { output.push_back("second"); };
+    auto printThird = [&output]() { output.push_back("third"); };
+
+    std::thread t3(&Foo::third, &foo, printThird);
+    std::thread t2(&Foo::second, &foo, printSecond);
+    std::thread t1(&Foo::first, &foo, printFirst);
 
     t1.join();
     t2.join();
     t3.join();
 
-    std::cout << "All tests passed.\n";
+    assert(output.size() == 3);
+    assert(output[0] == "first");
+    assert(output[1] == "second");
+    assert(output[2] == "third");
+
+    std::cout << "Unit test passed!" << std::endl;
 }
 
-// Performance Testing
-void performanceTest() {
-    Foo foo;
-    auto start = std::chrono::high_resolution_clock::now();
-    std::thread t1(&Foo::first, &foo);
-    std::thread t2(&Foo::second, &foo);
-    std::thread t3(&Foo::third, &foo);
+void runPerformanceTest() {
+    const int NUM_ITERATIONS = 10000;
+    std::atomic<int> counter(0);
 
-    t1.join();
-    t2.join();
-    t3.join();
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+        Foo foo;
+        auto printFirst = [&counter]() { counter++; };
+        auto printSecond = [&counter]() { counter++; };
+        auto printThird = [&counter]() { counter++; };
+
+        std::thread t3(&Foo::third, &foo, printThird);
+        std::thread t2(&Foo::second, &foo, printSecond);
+        std::thread t1(&Foo::first, &foo, printFirst);
+
+        t1.join();
+        t2.join();
+        t3.join();
+    }
+
     auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Performance Test: " << elapsed.count() << " seconds\n";
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    std::cout << "Performance test: " << duration.count() << "ms for "
+              << NUM_ITERATIONS << " iterations" << std::endl;
+    std::cout << "Total counter: " << counter << std::endl;
 }
 
 int main() {
-    testFoo();
-    performanceTest();
+    runUnitTest();
+    runPerformanceTest();
     return 0;
 }

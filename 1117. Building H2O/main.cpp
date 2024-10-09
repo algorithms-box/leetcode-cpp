@@ -1,3 +1,6 @@
+#include <atomic>
+#include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <iostream>
@@ -5,81 +8,109 @@
 #include <thread>
 #include <vector>
 
+using namespace std;
+
 class H2O {
   private:
-    std::mutex mtx;
-    std::condition_variable cv;
-    int hydrogen_count = 0;
-    int oxygen_count = 0;
+    mutex mtx;
+    condition_variable cv;
+    atomic<int> hydrogenCount{0};
+    atomic<int> oxygenCount{0};
 
   public:
     H2O() {}
 
-    void hydrogen(std::function<void()> releaseHydrogen) {
-        std::unique_lock<std::mutex> lock(mtx);
-        releaseHydrogen(); // outputs "H"
-        hydrogen_count++;
-        if (hydrogen_count == 2) {
-            hydrogen_count = 0;
-            cv.notify_one(); // Signal when two hydrogen atoms are available
+    void hydrogen(function<void()> releaseHydrogen) {
+        unique_lock<mutex> lock(mtx);
+        cv.wait(lock, [this] { return hydrogenCount < 2; });
+
+        releaseHydrogen();
+
+        hydrogenCount++;
+        if (hydrogenCount == 2 && oxygenCount == 1) {
+            hydrogenCount = 0;
+            oxygenCount = 0;
         }
+        cv.notify_all();
     }
 
-    void oxygen(std::function<void()> releaseOxygen) {
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this] {
-            return this->hydrogen_count == 0;
-        });              // Wait until two hydrogen atoms are available
-        releaseOxygen(); // outputs "O"
-        oxygen_count++;
+    void oxygen(function<void()> releaseOxygen) {
+        unique_lock<mutex> lock(mtx);
+        cv.wait(lock, [this] { return oxygenCount == 0; });
+
+        releaseOxygen();
+
+        oxygenCount++;
+        if (hydrogenCount == 2 && oxygenCount == 1) {
+            hydrogenCount = 0;
+            oxygenCount = 0;
+        }
+        cv.notify_all();
     }
 };
 
-// Unit Testing
-void testH2O() {
-    H2O h2o;
-    std::thread hydrogen_thread([&h2o] {
-        for (int i = 0; i < 10; ++i) {
-            h2o.hydrogen([]() { std::cout << "H"; });
-        }
-    });
-    std::thread oxygen_thread([&h2o] {
-        for (int i = 0; i < 5; ++i) {
-            h2o.oxygen([]() { std::cout << "O"; });
-        }
-    });
-    hydrogen_thread.join();
-    oxygen_thread.join();
-    std::cout << std::endl;
-    std::cout << "All tests passed.\n";
+// 用于测试的全局变量
+atomic<int> hydrogenReleased{0};
+atomic<int> oxygenReleased{0};
+
+void releaseHydrogen() {
+    hydrogenReleased++;
+    cout << "H";
 }
 
-// Performance Testing
-void performanceTest() {
+void releaseOxygen() {
+    oxygenReleased++;
+    cout << "O";
+}
+
+// 单元测试
+void runUnitTest() {
     H2O h2o;
-    auto start = std::chrono::high_resolution_clock::now();
-    std::vector<std::thread> hydrogen_threads;
-    std::vector<std::thread> oxygen_threads;
-    for (int i = 0; i < 10000; ++i) {
-        hydrogen_threads.emplace_back(
-            [&h2o] { h2o.hydrogen([]() { std::cout << "H"; }); });
+    vector<thread> threads;
+
+    for (int i = 0; i < 10; ++i) {
+        threads.emplace_back([&h2o]() { h2o.hydrogen(releaseHydrogen); });
+        threads.emplace_back([&h2o]() { h2o.hydrogen(releaseHydrogen); });
+        threads.emplace_back([&h2o]() { h2o.oxygen(releaseOxygen); });
     }
-    for (int i = 0; i < 5000; ++i) {
-        oxygen_threads.emplace_back(
-            [&h2o] { h2o.oxygen([]() { std::cout << "O"; }); });
+
+    for (auto &t : threads) {
+        t.join();
     }
-    for (auto &th : hydrogen_threads)
-        th.join();
-    for (auto &th : oxygen_threads)
-        th.join();
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "\nPerformance Test: " << elapsed.count() << " seconds"
-              << std::endl;
+
+    cout << endl;
+    assert(hydrogenReleased == 20 && "Hydrogen should be released 20 times");
+    assert(oxygenReleased == 10 && "Oxygen should be released 10 times");
+    cout << "Unit test passed!" << endl;
+}
+
+// 性能测试
+void runPerformanceTest() {
+    H2O h2o;
+    vector<thread> threads;
+    const int iterations = 100000;
+
+    auto start = chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < iterations; ++i) {
+        threads.emplace_back([&h2o]() { h2o.hydrogen([]() {}); });
+        threads.emplace_back([&h2o]() { h2o.hydrogen([]() {}); });
+        threads.emplace_back([&h2o]() { h2o.oxygen([]() {}); });
+    }
+
+    for (auto &t : threads) {
+        t.join();
+    }
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+
+    cout << "Performance test: " << iterations << " H2O molecules formed in "
+         << duration.count() << " ms" << endl;
 }
 
 int main() {
-    testH2O();
-    performanceTest();
+    runUnitTest();
+    runPerformanceTest();
     return 0;
 }

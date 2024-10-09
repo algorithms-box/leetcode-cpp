@@ -1,16 +1,15 @@
-CXX=g++
-CXXFLAGS=-std=c++11 -pthread -Wall -Wextra
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -Wextra -O3 -pthread
+TARGET = DiningPhilosophers
+SRCS = main.cpp
 
-all: main
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
-main: main.o DiningPhilosophers.o
-	$(CXX) $(CXXFLAGS) -o main main.o DiningPhilosophers.o
-
-main.o: main.cpp DiningPhilosophers.h
-	$(CXX) $(CXXFLAGS) -c main.cpp
-
-DiningPhilosophers.o: DiningPhilosophers.cpp DiningPhilosophers.h
-	$(CXX) $(CXXFLAGS) -c DiningPhilosophers.cpp
+.PHONY: clean run
 
 clean:
-	rm -f *.o main
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)

@@ -1,3 +1,15 @@
-cpp11_run:
-	g++ -std=c++11 -o generate_parathesis generate_parathesis.cpp
-	./generate_parathesis
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -Wextra -O3
+TARGET = generate_parentheses
+SRCS = main.cpp
+
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
+
+.PHONY: clean run
+
+clean:
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
