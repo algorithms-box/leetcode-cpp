@@ -1,29 +1,28 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.10)
+project(LongestPushTime)
 
-set(project_name longest_push_time)
+# 设置 C++17 标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-project(${project_name} LANGUAGES CXX)
+# 包含 src 文件夹
+include_directories(src)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# 添加源文件
+set(SRC_FILES src/LongestPushTime.cpp)
 
-add_library(${project_name}-lib
-        src/LongestPushTime.cpp
-)
+# 添加测试文件
+set(TEST_FILES test/LongestPushTimeTest.cpp)
 
-find_package(GTest REQUIRED)
+# 创建库
+add_library(LongestPushTime ${SRC_FILES})
 
-target_link_libraries(${project_name}-lib
-        PUBLIC GTest::GTest
-        PUBLIC GTest::Main
-)
+# 创建测试可执行文件
+add_executable(LongestPushTimeTest ${TEST_FILES})
 
-add_executable(${project_name}-test
-        test/LongestPushTimeTest.cpp
-)
+# 链接库和 Google Test
+target_link_libraries(LongestPushTimeTest LongestPushTime gtest gtest_main)
 
-target_link_libraries(${project_name}-test ${project_name}-lib)
-add_dependencies(${project_name}-test ${project_name}-lib)
-
+# 启用测试
 enable_testing()
-add_test(NAME LongestPushTimeTest COMMAND ${project_name}-test)
+add_test(NAME LongestPushTimeTest COMMAND LongestPushTimeTest)
